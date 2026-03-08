@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import type { PlanFeatures, UserPlan } from "@/types";
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "stripe_key_not_configured", {
   apiVersion: "2026-02-25.clover",
   typescript: true,
 });
@@ -58,7 +58,7 @@ export const PLANS: Record<UserPlan, PlanFeatures> = {
     priceAnnual: 1_910,
     stripePriceId: process.env.STRIPE_ENTERPRISE_PRICE_ID ?? null,
     limits: {
-      walletWatches: -1, // unlimited
+      walletWatches: -1,
       alertsPerDay: -1,
       apiRequestsPerDay: 100_000,
       historicalDataDays: 365,
