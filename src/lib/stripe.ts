@@ -1,10 +1,13 @@
 import Stripe from "stripe";
 import type { PlanFeatures, UserPlan } from "@/types";
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-02-25.clover",
-  typescript: true,
-});
+export const stripe = new Stripe(
+  process.env.STRIPE_SECRET_KEY ?? "stripe_key_not_configured",
+  {
+    apiVersion: "2026-02-25.clover",
+    typescript: true,
+  }
+);
 
 export const PLANS: Record<UserPlan, PlanFeatures> = {
   free: {
