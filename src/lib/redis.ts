@@ -1,18 +1,30 @@
 import Redis from "ioredis";
 
-const getRedisUrl = () => {
+let redisClient: Redis | null = null;
+let redisDisabledLogged = false;
+
+const globalForRedis = globalThis as unknown as { redis?: Redis | null };
+
+function getRedisClient(): Redis | null {
+  if (redisClient) {
+    return redisClient;
+  }
+
+  if (globalForRedis.redis) {
+    redisClient = globalForRedis.redis;
+    return redisClient;
+  }
+
   const url = process.env.REDIS_URL;
   if (!url) {
-    console.warn("[Redis] REDIS_URL not set – using default localhost:6379");
-    return "redis://localhost:6379";
+    if (!redisDisabledLogged) {
+      console.warn("[Redis] REDIS_URL not set – Redis features disabled (fail-open).");
+      redisDisabledLogged = true;
+    }
+    return null;
   }
-  return url;
-};
 
-const globalForRedis = globalThis as unknown as { redis: Redis };
-
-function createRedisClient(): Redis {
-  const client = new Redis(getRedisUrl(), {
+  const client = new Redis(url, {
     maxRetriesPerRequest: 3,
     retryStrategy(times) {
       if (times > 5) return null; // stop retrying after 5 attempts
@@ -29,19 +41,21 @@ function createRedisClient(): Redis {
     console.log("[Redis] Connected");
   });
 
-  return client;
-}
+  redisClient = client;
 
-export const redis: Redis =
-  globalForRedis.redis ?? createRedisClient();
+  if (process.env.NODE_ENV !== "production") {
+    globalForRedis.redis = redisClient;
+  }
 
-if (process.env.NODE_ENV !== "production") {
-  globalForRedis.redis = redis;
+  return redisClient;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 export async function cacheGet<T>(key: string): Promise<T | null> {
+  const redis = getRedisClient();
+  if (!redis) return null;
+
   try {
     const value = await redis.get(key);
     if (!value) return null;
@@ -52,6 +66,9 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
 }
 
 export async function cacheSet(key: string, value: unknown, ttlSeconds = 60): Promise<void> {
+  const redis = getRedisClient();
+  if (!redis) return;
+
   try {
     await redis.set(key, JSON.stringify(value), "EX", ttlSeconds);
   } catch (err) {
@@ -60,6 +77,9 @@ export async function cacheSet(key: string, value: unknown, ttlSeconds = 60): Pr
 }
 
 export async function cacheDel(key: string): Promise<void> {
+  const redis = getRedisClient();
+  if (!redis) return;
+
   try {
     await redis.del(key);
   } catch (err) {
@@ -74,6 +94,11 @@ export async function rateLimit(
 ): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
   const now = Date.now();
   const windowKey = `rate:${key}:${Math.floor(now / (windowSeconds * 1000))}`;
+  const redis = getRedisClient();
+
+  if (!redis) {
+    return { allowed: true, remaining: maxRequests, resetAt: now + windowSeconds * 1000 };
+  }
 
   try {
     const count = await redis.incr(windowKey);
