@@ -13,6 +13,9 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "s2.coinmarketcap.com" },
     ],
   },
+  compiler: {
+    styledJsx: false,
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: "2mb",
