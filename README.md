@@ -120,20 +120,28 @@ All API routes live under `/api`.
 
 ## ☁️ Deployment
 
-### Vercel (Frontend + API)
+> 📖 **Full step-by-step instructions**: see [DEPLOYMENT.md](DEPLOYMENT.md)
 
-1. Push to GitHub and import the repo in [Vercel](https://vercel.com).
-2. Set all environment variables from `.env.example` in the Vercel dashboard.
-3. Vercel will auto-deploy on every push to `main`.
+### Quick start (Vercel + Railway)
 
-### Railway (PostgreSQL + Redis)
+```
+Railway          →  Vercel             →  Your browser
+─────────────       ──────────────        ───────────────
+PostgreSQL   ──┐    1. Import repo        https://your-app.vercel.app
+Redis        ──┴──▶ 2. Add env vars
+                    3. Deploy
+```
 
-1. Create a new project on [Railway](https://railway.app).
-2. Add a **PostgreSQL** plugin and a **Redis** plugin.
-3. Copy the connection strings into your Vercel environment variables:
-   - `DATABASE_URL` ← PostgreSQL connection string
-   - `REDIS_URL` ← Redis connection string
-4. Run migrations: `npx prisma migrate deploy`
+1. **Database & cache** — Create a project on [Railway](https://railway.app), add a **PostgreSQL** and a **Redis** service, then copy both connection strings.
+2. **OAuth apps** — Create Google and GitHub OAuth apps; set the callback URL to `https://<domain>/api/auth/callback/{google,github}`.
+3. **Stripe** — Create Pro and Enterprise products, add a webhook endpoint pointing to `https://<domain>/api/stripe/webhook`.
+4. **Vercel** — Import this repo at [vercel.com/new](https://vercel.com/new), paste all environment variables from `.env.example`, and deploy.
+5. **Migrations** — Run once after the first deploy:
+   ```bash
+   DATABASE_URL="<railway-url>" npx prisma migrate deploy
+   ```
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the complete guide including self-hosting with Docker.
 
 ---
 
