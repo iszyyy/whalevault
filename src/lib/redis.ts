@@ -15,10 +15,31 @@ function getRedisClient(): Redis | null {
     return redisClient;
   }
 
+  const isNextProductionBuild = process.env.NEXT_PHASE === "phase-production-build";
+  if (isNextProductionBuild) {
+    if (!redisDisabledLogged) {
+      console.warn("[Redis] Skipping Redis during Next.js production build (fail-open).");
+      redisDisabledLogged = true;
+    }
+    return null;
+  }
+
   const url = process.env.REDIS_URL;
   if (!url) {
     if (!redisDisabledLogged) {
       console.warn("[Redis] REDIS_URL not set – Redis features disabled (fail-open).");
+      redisDisabledLogged = true;
+    }
+    return null;
+  }
+
+  const isRailwayInternalHost = url.includes(".railway.internal");
+  const isVercel = process.env.VERCEL === "1";
+  if (isRailwayInternalHost && isVercel) {
+    if (!redisDisabledLogged) {
+      console.warn(
+        "[Redis] REDIS_URL uses a Railway private host from Vercel; Redis disabled. Use Railway public Redis URL."
+      );
       redisDisabledLogged = true;
     }
     return null;
