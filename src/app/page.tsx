@@ -288,12 +288,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        <style jsx>{`
-          @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-16px); }
-          }
-        `}</style>
       </section>
 
       {/* ── Features ──────────────────────────────────────────────────────── */}
