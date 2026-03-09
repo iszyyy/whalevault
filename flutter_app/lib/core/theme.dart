@@ -11,7 +11,7 @@ class AppTheme {
         brightness: Brightness.dark,
       ),
       scaffoldBackgroundColor: const Color(0xFF0B0F19),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: const Color(0xFF111827),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
