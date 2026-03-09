@@ -22,66 +22,53 @@ export async function POST(req: Request) {
       );
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(normalizedEmail)) {
       return NextResponse.json({ error: "Invalid email address." }, { status: 400 });
     }
 
     const hashedPassword = await hash(password, 12);
     const apiKey = generateApiKey();
 
-    // Attempt DB creation; gracefully degrade if DB is unavailable
-    try {
-      const { prisma } = await import("@/lib/prisma");
+    const { prisma } = await import("@/lib/prisma");
 
-      const existing = await prisma.user.findUnique({ where: { email } });
-      if (existing) {
-        return NextResponse.json(
-          { error: "An account with this email already exists." },
-          { status: 409 }
-        );
-      }
-
-      const user = await prisma.user.create({
-        data: {
-          name: name ?? null,
-          email,
-          password: hashedPassword,
-          role: "user",
-          subscriptionTier: "free",
-          apiKey,
-        },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-          subscriptionTier: true,
-          createdAt: true,
-        },
-      });
-
-      return NextResponse.json({ message: "Account created successfully.", user }, { status: 201 });
-    } catch (dbError) {
-      // DB unavailable — return a demo success so the UI flow is testable
-      console.error("[register] DB error (demo mode):", dbError);
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (existing) {
       return NextResponse.json(
-        {
-          message: "Account created successfully (demo mode).",
-          user: {
-            id: crypto.randomUUID(),
-            name: name ?? null,
-            email,
-            role: "user",
-            subscriptionTier: "free",
-            apiKey,
-          },
-        },
-        { status: 201 }
+        { error: "An account with this email already exists." },
+        { status: 409 }
       );
     }
+
+    const user = await prisma.user.create({
+      data: {
+        name: name?.trim() || null,
+        email: normalizedEmail,
+        password: hashedPassword,
+        role: "user",
+        subscriptionTier: "free",
+        apiKey,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        subscriptionTier: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json({ message: "Account created successfully.", user }, { status: 201 });
   } catch (err) {
     console.error("[register] Unexpected error:", err);
-    return NextResponse.json({ error: "Internal server error." }, { status: 500 });
+    return NextResponse.json(
+      {
+        error:
+          "Unable to create account right now. Please try again in a moment.",
+      },
+      { status: 500 }
+    );
   }
 }
